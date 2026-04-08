@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Hill DSS — New Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#0e0e0e;--ink2:#3a3a3a;--ink3:#6e6e6e;--paper:#f4f1ec;--paper2:#eae7e0;--paper3:#dedad2;--accent:#c84b2f;--accent2:#e8793a;--ok:#1a6b4a;--ok-bg:#d4ede3;--ok-txt:#0d4a30;--warn:#8a5a00;--warn-bg:#fdefc7;--warn-txt:#5c3c00;--danger:#8b1a1a;--danger-bg:#fce4e4;--danger-txt:#5c0000;--blue:#185FA5;--blue-bg:#E6F1FB;--blue-txt:#0C447C;--border:rgba(14,14,14,0.1);--fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;--r:6px;--rl:12px}
+html{scroll-behavior:smooth}
+body{font-family:var(--fb);background:var(--paper);color:var(--ink);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5}
+header{background:var(--ink);padding:0 clamp(20px,4vw,56px);position:relative;overflow:hidden}
+.hgeo{position:absolute;right:-80px;top:-80px;width:400px;height:400px;border:1px solid rgba(244,241,236,.05);border-radius:50%;pointer-events:none}
+.hgeo::before{content:'';position:absolute;inset:60px;border:1px solid rgba(244,241,236,.04);border-radius:50%}
+.hinner{max-width:1280px;margin:0 auto;padding:32px 0;display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;z-index:1}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:20px;height:20px;fill:white}
+.logo-text{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--paper)}
+.logo-sub{font-size:11px;color:rgba(244,241,236,.4);margin-top:1px}
+.nav-links{display:flex;gap:8px}
+.nav-btn{padding:9px 18px;border-radius:var(--r);font-family:var(--fb);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(244,241,236,.2);color:rgba(244,241,236,.7);background:transparent;text-decoration:none;transition:all .15s}
+.nav-btn:hover{background:rgba(244,241,236,.08);color:var(--paper)}
+/* LIVE SCORE BAR */
+.live-bar{background:rgba(244,241,236,.04);border-top:1px solid rgba(244,241,236,.07);padding:0 clamp(20px,4vw,56px)}
+.live-bar-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:12px 0}
+.live-score-label{font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(244,241,236,.4);flex-shrink:0}
+.live-track{flex:1;height:6px;background:rgba(244,241,236,.1);border-radius:3px;overflow:hidden}
+.live-fill{height:100%;border-radius:3px;transition:width .4s ease,background .4s ease;width:0}
+.live-num{font-family:var(--fd);font-size:18px;font-weight:700;color:white;min-width:48px;text-align:right}
+.live-verdict{font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500;transition:all .3s;flex-shrink:0}
+/* STEP NAV */
+.pbar{background:var(--ink);border-top:1px solid rgba(244,241,236,.07);padding:0 clamp(20px,4vw,56px)}
+.pbar-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;padding:12px 0}
+.step{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;transition:opacity .2s}
+.step:hover{opacity:.75}
+.snum{width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(244,241,236,.18);display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:10px;color:rgba(244,241,236,.3);flex-shrink:0;transition:all .3s}
+.step.active .snum{background:var(--accent);border-color:var(--accent);color:#fff}
+.step.done .snum{background:rgba(26,107,74,.3);border-color:var(--ok);color:#4cc98a}
+.slbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(244,241,236,.25);transition:color .3s}
+.step.active .slbl{color:rgba(244,241,236,.85)}
+.step.done .slbl{color:rgba(244,241,236,.45)}
+.sconn{flex:1;height:1px;background:rgba(244,241,236,.08);margin:0 6px}
+@media(max-width:600px){.slbl{display:none}.sconn{margin:0 2px}}
+main{max-width:1280px;margin:0 auto;padding:44px clamp(20px,4vw,56px) 100px;position:relative;z-index:1}
+/* SITE NAME INPUT */
+.site-name-row{margin-bottom:28px}
+.site-name-input{width:100%;padding:14px 18px;font-family:var(--fd);font-size:18px;font-weight:600;color:var(--ink);background:#fff;border:1px solid var(--border);border-radius:var(--rl);outline:none;transition:border-color .15s}
+.site-name-input:focus{border-color:var(--accent)}
+.site-name-input::placeholder{color:var(--ink3);font-weight:400}
+/* HEATMAP */
+.heatmap-bar{display:grid;grid-template-columns:repeat(15,1fr);gap:4px;margin-bottom:32px;padding:16px;background:#fff;border:1px solid var(--border);border-radius:var(--rl)}
+.hm-cell{aspect-ratio:1;border-radius:4px;background:var(--paper3);transition:background .3s;cursor:help;position:relative}
+.hm-cell.ok{background:var(--ok-bg)}.hm-cell.warn{background:var(--warn-bg)}.hm-cell.danger{background:var(--danger-bg)}.hm-cell.neutral{background:var(--paper3)}
+.hm-lbl{font-size:9px;text-align:center;color:var(--ink3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* SECTIONS */
+.section{margin-bottom:32px;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.sec-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sec-title{font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sec-sub{font-size:12px;color:var(--ink3);margin-top:2px}
+.sec-num{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--ink3);background:var(--paper2);padding:3px 9px;border-radius:100px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:960px){.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g3,.g2{grid-template-columns:1fr}}
+.icard{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:18px;transition:border-color .2s,box-shadow .2s}
+.icard:focus-within{border-color:rgba(200,75,47,.4);box-shadow:0 0 0 3px rgba(200,75,47,.07)}
+.icard.s-ok{border-left:3px solid var(--ok)}.icard.s-warn{border-left:3px solid #d4900a}.icard.s-danger{border-left:3px solid var(--accent)}
+.ilbl{font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.isrc{font-size:9px;font-family:var(--fm);color:var(--ink3);background:var(--paper2);padding:2px 6px;border-radius:4px}
+.ihint{font-size:11px;color:var(--ink3);margin-top:7px;line-height:1.45}
+/* Number inputs */
+.num-input-wrap{display:flex;align-items:center;gap:8px}
+.num-input{flex:1;padding:10px 12px;font-family:var(--fm);font-size:16px;font-weight:500;color:var(--ink);background:var(--paper);border:1px solid var(--border);border-radius:var(--r);outline:none;transition:border-color .15s;-moz-appearance:textfield}
+.num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.num-input:focus{border-color:var(--accent);background:#fff}
+.num-unit{font-family:var(--fm);font-size:12px;color:var(--ink3);flex-shrink:0;min-width:40px}
+/* Slider */
+.sw{display:flex;align-items:center;gap:12px}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:var(--paper3);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--ink);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.15);transition:background .15s,transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{background:var(--accent);transform:scale(1.15)}
+.sval{font-family:var(--fm);font-size:14px;font-weight:500;min-width:44px;text-align:right}
+/* Seg control */
+.seg{display:flex;gap:3px;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:3px}
+.sbtn{flex:1;padding:8px 4px;font-family:var(--fb);font-size:12px;font-weight:500;color:var(--ink3);background:transparent;border:none;border-radius:calc(var(--r) - 2px);cursor:pointer;transition:all .15s;text-align:center}
+.sbtn:hover{color:var(--ink);background:var(--paper2)}
+.sbtn.on{background:var(--ink);color:var(--paper)}
+.sbtn.on.ok{background:var(--ok)}.sbtn.on.warn{background:#b07800}.sbtn.on.danger{background:var(--accent)}
+/* Select */
+select{width:100%;font-family:var(--fb);font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:10px 36px 10px 12px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236e6e6e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
+select:focus{border-color:var(--accent);background-color:#fff}
+/* Status pill */
+.spill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:100px;margin-top:8px;opacity:0;transform:translateY(4px);transition:all .25s}
+.spill.vis{opacity:1;transform:none}
+.spill.ok{background:var(--ok-bg);color:var(--ok-txt)}.spill.warn{background:var(--warn-bg);color:var(--warn-txt)}.spill.danger{background:var(--danger-bg);color:var(--danger-txt)}
+.spill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+/* SPT Calculator */
+.spt-box{background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:var(--r);padding:12px 14px;margin-top:8px}
+.spt-title{font-size:11px;font-weight:500;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.spt-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spt-row input{width:80px;padding:7px 9px;font-family:var(--fm);font-size:13px;border:1px solid #B5D4F4;border-radius:var(--r);outline:none;background:#fff;color:var(--ink);-moz-appearance:textfield}
+.spt-row input::-webkit-outer-spin-button,.spt-row input::-webkit-inner-spin-button{-webkit-appearance:none}
+.spt-row label{font-size:11px;color:var(--blue-txt)}
+.spt-btn{padding:7px 14px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:background .15s}
+.spt-btn:hover{background:#0C447C}
+.spt-result{font-family:var(--fm);font-size:12px;color:var(--blue-txt);margin-top:6px;min-height:16px}
+/* Divider */
+.divid{display:flex;align-items:center;gap:16px;margin:36px 0 24px}
+.divid-line{flex:1;height:1px;background:var(--border)}.divid-lbl{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+/* Submit */
+.sub-row{display:flex;align-items:center;gap:14px;margin-top:36px;flex-wrap:wrap}
+.btn-run{position:relative;padding:14px 36px;font-family:var(--fd);font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--ink);border:none;border-radius:var(--r);cursor:pointer;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.btn-run::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),var(--accent2));opacity:0;transition:opacity .3s}
+.btn-run:hover::before{opacity:1}
+.btn-run:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,75,47,.3)}
+.btn-run:active{transform:none}
+.btn-run span{position:relative;z-index:1}
+.btn-rst{padding:14px 20px;font-family:var(--fb);font-size:13px;color:var(--ink3);background:transparent;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s}
+.btn-rst:hover{background:var(--paper2);color:var(--ink)}
+.loading{display:none;align-items:center;gap:10px;font-size:13px;color:var(--ink3)}
+.loading.vis{display:flex}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Results */
+#rp{display:none;margin-top:48px;animation:fadeUp .5s ease both}
+#rp.vis{display:block}
+.res-hero{display:grid;grid-template-columns:280px 1fr;gap:24px;margin-bottom:24px;align-items:start}
+@media(max-width:720px){.res-hero{grid-template-columns:1fr}}
+.sdial{background:var(--ink);border-radius:var(--rl);padding:32px 24px;text-align:center;position:relative;overflow:hidden}
+.sdial::after{content:'';position:absolute;bottom:-50px;right:-50px;width:160px;height:160px;border:1px solid rgba(244,241,236,.05);border-radius:50%}
+.sdial-lbl{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(244,241,236,.38);margin-bottom:12px}
+.snum-big{font-family:var(--fd);font-size:72px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.04em}
+.snum-big span{font-size:28px;color:rgba(244,241,236,.35);font-weight:400}
+.sbar-o{height:6px;background:rgba(244,241,236,.1);border-radius:3px;margin:14px 0;overflow:hidden}
+.sbar-i{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.23,1,.32,1);width:0}
+.sverd{font-family:var(--fd);font-size:14px;font-weight:700;margin-top:10px;color:#fff}
+.sact{font-size:12px;color:rgba(244,241,236,.45);margin-top:5px;line-height:1.5}
+.vcard{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:24px}
+.vlbl{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.vtitle{font-family:var(--fd);font-size:22px;font-weight:800;line-height:1.1;margin-bottom:10px}
+.vdesc{font-size:13px;color:var(--ink2);line-height:1.65;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.bdr{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0}
+.bdl{color:var(--ink3)}.bdv{font-family:var(--fm);font-weight:500}
+.bdv.pos{color:var(--ok)}.bdv.neg{color:var(--danger)}.bdv.base{color:var(--ink)}
+.c-green{color:var(--ok)}.c-amber{color:#b07800}.c-orange{color:#c06800}.c-red{color:var(--danger)}
+.b-green{background:var(--ok)}.b-amber{background:#c8900a}.b-orange{background:#b06000}.b-red{background:var(--accent)}
+/* Heatmap result */
+.hm-result-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:600px){.hm-result-grid{grid-template-columns:repeat(3,1fr)}}
+.hm-result-cell{border-radius:var(--r);padding:10px 12px;transition:transform .2s;cursor:default}
+.hm-result-cell:hover{transform:translateY(-2px)}
+.hm-result-cell.ok{background:var(--ok-bg)}.hm-result-cell.warn{background:var(--warn-bg)}.hm-result-cell.danger{background:var(--danger-bg)}
+.hm-rc-param{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.hm-rc-label{font-size:11px;font-weight:500;line-height:1.3}
+.hm-rc-score{font-family:var(--fm);font-size:11px;margin-top:3px}
+.ok .hm-rc-param,.ok .hm-rc-label,.ok .hm-rc-score{color:var(--ok-txt)}
+.warn .hm-rc-param,.warn .hm-rc-label,.warn .hm-rc-score{color:var(--warn-txt)}
+.danger .hm-rc-param,.danger .hm-rc-label,.danger .hm-rc-score{color:var(--danger-txt)}
+/* Result section title */
+.rst{font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);margin:28px 0 14px;display:flex;align-items:center;gap:10px}
+.rst::after{content:'';flex:1;height:1px;background:var(--border)}
+/* Design recommendation */
+.design-card{background:#fff;border:2px solid var(--blue);border-radius:var(--rl);padding:22px;margin-bottom:18px}
+.design-badge{background:var(--blue-bg);color:var(--blue-txt);font-family:var(--fm);font-size:11px;font-weight:500;padding:3px 10px;border-radius:100px;letter-spacing:.05em;margin-bottom:12px;display:inline-block}
+.design-typology{font-family:var(--fd);font-size:19px;font-weight:700;color:var(--blue);margin-bottom:6px}
+.design-detail{font-size:13px;color:var(--ink2);line-height:1.65;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.design-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.design-grid{grid-template-columns:1fr}}
+.design-item{background:var(--blue-bg);border-radius:var(--r);padding:12px}
+.design-item-lbl{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.design-item-txt{font-size:12px;color:var(--blue-txt);line-height:1.55}
+.design-overall{background:var(--ink);color:var(--paper);border-radius:var(--r);padding:12px 14px;margin-top:14px;font-size:13px;line-height:1.5}
+/* Param results */
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:960px){.rgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.rgrid{grid-template-columns:1fr}}
+.ritem{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:14px;border-left:3px solid transparent;transition:transform .2s}
+.ritem:hover{transform:translateY(-2px)}
+.ritem.ok{border-left-color:var(--ok)}.ritem.warn{border-left-color:#d4900a}.ritem.danger{border-left-color:var(--accent)}
+.rip{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.ril{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
+.ris{font-family:var(--fm);font-size:11px;font-weight:500;margin-bottom:7px}
+.ris.pos{color:var(--ok)}.ris.neg{color:var(--danger)}.ris.z{color:var(--ink3)}
+.remedial-box{background:var(--paper2);border-radius:var(--r);padding:8px 10px;margin-top:5px}
+.remedial-lbl{font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:3px}
+.remedial-txt{font-size:11px;color:var(--ink2);line-height:1.55}
+.ritem.danger .remedial-box{background:var(--danger-bg)}.ritem.danger .remedial-txt{color:var(--danger-txt)}
+.ritem.warn .remedial-box{background:var(--warn-bg)}.ritem.warn .remedial-txt{color:var(--warn-txt)}
+.ria-src{font-family:var(--fm);font-size:9px;color:var(--ink3);margin-top:4px}
+/* Compound */
+.clist{display:flex;flex-direction:column;gap:10px}
+.citem{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:14px;border-left:3px solid transparent}
+.citem.danger{border-left-color:var(--accent)}.citem.warn{border-left-color:#d4900a}.citem.ok{border-left-color:var(--ok)}
+.crule-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.crule{font-size:12px;font-weight:500;color:var(--ink)}
+.cscore{font-family:var(--fm);font-size:12px;font-weight:500;flex-shrink:0}
+.cscore.pos{color:var(--ok)}.cscore.neg{color:var(--danger)}
+.creason{font-size:11px;color:var(--ink3);margin-bottom:7px;line-height:1.5}
+.cremedial{background:var(--paper2);border-radius:var(--r);padding:7px 10px;font-size:11px;color:var(--ink2);line-height:1.55}
+.citem.danger .cremedial{background:var(--danger-bg);color:var(--danger-txt)}
+.citem.warn .cremedial{background:var(--warn-bg);color:var(--warn-txt)}
+/* PDF + action buttons */
+.result-actions{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.btn-pdf{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--blue);border:none;border-radius:var(--r);cursor:pointer;transition:all .2s}
+.btn-pdf:hover{background:#0C447C;transform:translateY(-2px);box-shadow:0 6px 20px rgba(24,95,165,.3)}
+.btn-pdf svg{width:15px;height:15px;fill:white}
+.btn-dash{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ok-txt);background:var(--ok-bg);border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-dash:hover{background:#c0e8d5;transform:translateY(-2px)}
+.btn-dash svg{width:15px;height:15px}
+.disc{margin-top:28px;padding:14px 18px;background:var(--paper2);border-radius:var(--r);border:1px solid var(--border);font-size:11px;color:var(--ink3);line-height:1.65;display:flex;gap:10px;align-items:flex-start}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:var(--rl);font-size:13px;z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.ico-t{background:#e8f0fe}.ico-s{background:#fce8d5}.ico-st{background:#f0e8fe}.ico-m{background:#e4f5e8}.ico-sa{background:#fce4e4}.ico-f{background:#e8f0f5}
+</style>
+</head>
+<body>
+<header>
+  <div class="hgeo"></div>
+  <div class="hinner">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2zm0 4.2l7.2 12.8H4.8L12 6.2z"/></svg></div>
+      <div><div class="logo-text">Hill Construction DSS</div><div class="logo-sub">New Site Assessment</div></div>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="nav-btn">← Dashboard</a>
+    </div>
+  </div>
+</header>
+
+<!-- LIVE SCORE BAR -->
+<div class="live-bar">
+  <div class="live-bar-inner">
+    <span class="live-score-label">Live Score</span>
+    <div class="live-track"><div class="live-fill" id="live-fill"></div></div>
+    <span class="live-num" id="live-num">—</span>
+    <span class="live-verdict" id="live-verdict" style="background:rgba(244,241,236,.08);color:rgba(244,241,236,.5)">Fill parameters</span>
+  </div>
+</div>
+
+<!-- STEP NAV -->
+<div class="pbar">
+  <div class="pbar-inner">
+    <div class="step active" id="st1" onclick="goTo('terrain')"><div class="snum">1</div><span class="slbl">Terrain</span></div><div class="sconn"></div>
+    <div class="step" id="st2" onclick="goTo('soil')"><div class="snum">2</div><span class="slbl">Soil</span></div><div class="sconn"></div>
+    <div class="step" id="st3" onclick="goTo('structural')"><div class="snum">3</div><span class="slbl">Structural</span></div><div class="sconn"></div>
+    <div class="step" id="st4" onclick="goTo('material')"><div class="snum">4</div><span class="slbl">Material</span></div><div class="sconn"></div>
+    <div class="step" id="st5" onclick="goTo('safety')"><div class="snum">5</div><span class="slbl">Safety</span></div><div class="sconn"></div>
+    <div class="step" id="st6" onclick="goTo('functional')"><div class="snum">6</div><span class="slbl">Functional</span></div>
+  </div>
+</div>
+
+<main>
+  <!-- SITE NAME -->
+  <div class="site-name-row">
+    <input type="text" class="site-name-input" id="site-name" placeholder="Enter site name or location (e.g. Ooty Plot A, Survey No. 45/2)…">
+  </div>
+
+  <!-- HEATMAP -->
+  <div style="margin-bottom:8px;font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)">Parameter risk heatmap — live</div>
+  <div class="heatmap-bar" id="heatmap">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- TERRAIN -->
+  <div class="section" id="terrain">
+    <div class="sec-hdr"><div class="sec-ico ico-t">⛰️</div><div><div class="sec-title">Terrain Parameters</div><div class="sec-sub">Physical site characteristics and geographic hazards</div></div><div class="sec-num">1/6</div></div>
+    <div class="grid g3">
+      <div class="icard" id="ic-slope"><div class="ilbl">Slope Angle <span class="isrc">IS 14458</span></div><div class="sw"><input type="range" id="slope_angle" min="0" max="90" step="1" value="0" oninput="onSlider(this,'sv-slope','°')"><span class="sval" id="sv-slope">0°</span></div><div class="ihint">Safe limit: ≤15° without earthworks (NBC 2016)</div><div class="spill" id="pill-slope"></div></div>
+      <div class="icard" id="ic-elev">
+        <div class="ilbl">Elevation above sea level <span class="isrc">IS 875</span></div>
+        <div class="num-input-wrap"><input type="number" class="num-input" id="elevation" min="0" max="5000" value="500" placeholder="e.g. 900" oninput="onNumInput('elevation')"><span class="num-unit">m AMSL</span></div>
+        <div class="ihint">Enter actual altitude in metres · &lt;600m = Low · 600–1500m = Medium · &gt;1500m = High</div>
+        <div class="spill" id="pill-elev"></div>
+      </div>
+      <div class="icard" id="ic-land"><div class="ilbl">Landslide Risk Zone <span class="isrc">NDMA</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'landslide_risk','low')">Low</button><button class="sbtn warn" onclick="onSeg(this,'landslide_risk','medium')">Medium</button><button class="sbtn danger" onclick="onSeg(this,'landslide_risk','high')">High</button></div><input type="hidden" id="landslide_risk" value="low"><div class="ihint">From GSI Landslide Atlas or NDMA hazard maps</div><div class="spill" id="pill-land"></div></div>
+    </div>
+  </div>
+  <div class="divid"><div class="divid-line"></div><div class="divid-lbl">Soil</div><div class="divid-line"></div></div>
+
+  <!-- SOIL -->
+  <div class="section" id="soil">
+    <div class="sec-hdr"><div class="sec-ico ico-s">🪨</div><div><div class="sec-title">Soil Parameters</div><div class="sec-sub">Foundation stability and load-bearing characteristics</div></div><div class="sec-num">2/6</div></div>
+    <div class="grid g3">
+      <div class="icard" id="ic-soil"><div class="ilbl">Soil Type <span class="isrc">IS 1498</span></div><div class="seg"><button class="sbtn ok" onclick="onSeg(this,'soil_type','rock')">Rock</button><button class="sbtn on warn" onclick="onSeg(this,'soil_type','clay')">Clay</button><button class="sbtn danger" onclick="onSeg(this,'soil_type','sandy')">Sandy</button></div><input type="hidden" id="soil_type" value="clay"><div class="ihint">Rock = best · Sandy = liquefaction risk (IS 1893)</div><div class="spill" id="pill-soil"></div></div>
+      <div class="icard" id="ic-bear">
+        <div class="ilbl">Bearing Capacity <span class="isrc">IS 6403</span></div>
+        <div class="num-input-wrap"><input type="number" class="num-input" id="bearing_capacity" min="0" max="2000" value="150" placeholder="e.g. 150" oninput="onNumInput('bearing_capacity')"><span class="num-unit">kN/m²</span></div>
+        <div class="ihint">From SPT or plate load test · Safe: ≥100 kN/m²</div>
+        <!-- SPT CALCULATOR -->
+        <div class="spt-box">
+          <div class="spt-title">SPT N-value → Bearing capacity calculator</div>
+          <div class="spt-row">
+            <label>N-value</label><input type="number" id="spt-n" min="1" max="100" placeholder="e.g. 15">
+            <label>Depth (m)</label><input type="number" id="spt-d" min="0.5" max="30" step="0.5" placeholder="1.5">
+            <button class="spt-btn" onclick="calcSPT()">Calculate →</button>
+          </div>
+          <div class="spt-result" id="spt-result"></div>
+        </div>
+        <div class="spill" id="pill-bear"></div>
+      </div>
+      <div class="icard" id="ic-moist">
+        <div class="ilbl">Soil Moisture Content <span class="isrc">IS 8009</span></div>
+        <div class="num-input-wrap"><input type="number" class="num-input" id="moisture_content" min="0" max="100" value="12" placeholder="e.g. 12" oninput="onNumInput('moisture_content')"><span class="num-unit">%</span></div>
+        <div class="ihint">From lab test · &lt;15% = Low · 15–30% = Medium · &gt;30% = High risk</div>
+        <div class="spill" id="pill-moist"></div>
+      </div>
+    </div>
+  </div>
+  <div class="divid"><div class="divid-line"></div><div class="divid-lbl">Structural</div><div class="divid-line"></div></div>
+
+  <!-- STRUCTURAL -->
+  <div class="section" id="structural">
+    <div class="sec-hdr"><div class="sec-ico ico-st">🏗️</div><div><div class="sec-title">Structural Parameters</div><div class="sec-sub">Building height, load classification, and foundation design</div></div><div class="sec-num">3/6</div></div>
+    <div class="grid g3">
+      <div class="icard" id="ic-floors"><div class="ilbl">Number of Floors <span class="isrc">NBC 2016</span></div><div class="sw"><input type="range" id="num_floors" min="1" max="20" step="1" value="2" oninput="onSlider(this,'sv-floors','')"><span class="sval" id="sv-floors">2</span></div><div class="ihint">Above 5 floors requires pile foundation (IS 2911)</div><div class="spill" id="pill-floors"></div></div>
+      <div class="icard" id="ic-found">
+        <div class="ilbl">Foundation Type <span class="isrc">IS 2911</span></div>
+        <select id="foundation_type" onchange="onDrop(this)">
+          <option value="pile">Pile Foundation — best for slopes/weak soil</option>
+          <option value="raft">Raft Foundation — good load distribution</option>
+          <option value="stepped">Stepped Foundation — ideal for hilly terrain</option>
+          <option value="isolated">Isolated Column Footing — flat strong soil only</option>
+          <option value="combined">Combined Footing — adjacent column loads</option>
+          <option value="under_reamed">Under-reamed Pile — expansive clay soils</option>
+          <option value="shallow">Shallow Foundation — flat, strong soil only</option>
+        </select>
+        <div class="ihint">Under-reamed pile recommended for expansive clay (IS 2911 Part 3)</div>
+        <div class="spill" id="pill-found"></div>
+      </div>
+      <div class="icard" id="ic-load">
+        <div class="ilbl">Building Load <span class="isrc">IS 875 Part 2</span></div>
+        <div class="num-input-wrap"><input type="number" class="num-input" id="building_load" min="0" max="100" value="5" placeholder="e.g. 5" oninput="onNumInput('building_load')"><span class="num-unit">kN/m²</span></div>
+        <div class="ihint">Total floor load · Residential: 2–5 · Commercial: 5–10 · Industrial: &gt;10 kN/m²</div>
+        <div class="spill" id="pill-load"></div>
+      </div>
+    </div>
+  </div>
+  <div class="divid"><div class="divid-line"></div><div class="divid-lbl">Material</div><div class="divid-line"></div></div>
+
+  <!-- MATERIAL -->
+  <div class="section" id="material">
+    <div class="sec-hdr"><div class="sec-ico ico-m">🧱</div><div><div class="sec-title">Material Parameters</div><div class="sec-sub">Construction materials and wall system selection</div></div><div class="sec-num">4/6</div></div>
+    <div class="grid g2">
+      <div class="icard" id="ic-mat"><div class="ilbl">Construction Material <span class="isrc">IS 456</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'material','concrete')">Concrete</button><button class="sbtn ok" onclick="onSeg(this,'material','steel')">Steel</button><button class="sbtn warn" onclick="onSeg(this,'material','wood')">Wood</button></div><input type="hidden" id="material" value="concrete"><div class="ihint">Concrete + Steel best for all seismic zones</div><div class="spill" id="pill-mat"></div></div>
+      <div class="icard" id="ic-wall"><div class="ilbl">Wall Type <span class="isrc">IS 13920</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'wall_type','reinforced')">Reinforced</button><button class="sbtn ok" onclick="onSeg(this,'wall_type','brick')">Brick</button><button class="sbtn warn" onclick="onSeg(this,'wall_type','lightweight')">Lightweight</button></div><input type="hidden" id="wall_type" value="reinforced"><div class="ihint">Reinforced mandatory in seismic zone 3+ (IS 13920)</div><div class="spill" id="pill-wall"></div></div>
+    </div>
+  </div>
+  <div class="divid"><div class="divid-line"></div><div class="divid-lbl">Safety</div><div class="divid-line"></div></div>
+
+  <!-- SAFETY -->
+  <div class="section" id="safety">
+    <div class="sec-hdr"><div class="sec-ico ico-sa">🛡️</div><div><div class="sec-title">Safety Parameters</div><div class="sec-sub">Slope protection, drainage, and seismic zone</div></div><div class="sec-num">5/6</div></div>
+    <div class="grid g3">
+      <div class="icard" id="ic-ret"><div class="ilbl">Retaining Wall <span class="isrc">IS 14458</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'retaining_wall','yes')">Present</button><button class="sbtn danger" onclick="onSeg(this,'retaining_wall','no')">Not Present</button></div><input type="hidden" id="retaining_wall" value="yes"><div class="ihint">Required when slope &gt;15° per IS 14458</div><div class="spill" id="pill-ret"></div></div>
+      <div class="icard" id="ic-drain"><div class="ilbl">Drainage System <span class="isrc">IS 4111</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'drainage','yes')">Available</button><button class="sbtn danger" onclick="onSeg(this,'drainage','no')">Not Available</button></div><input type="hidden" id="drainage" value="yes"><div class="ihint">Sub-surface + perimeter drainage essential</div><div class="spill" id="pill-drain"></div></div>
+      <div class="icard" id="ic-seis"><div class="ilbl">Seismic Zone <span class="isrc">IS 1893</span></div><select id="seismic_zone" onchange="onDrop(this)"><option value="1">Zone 1 — Very Low Risk</option><option value="2">Zone 2 — Low Risk</option><option value="3">Zone 3 — Moderate Risk</option><option value="4">Zone 4 — High Risk</option><option value="5">Zone 5 — Very High Risk</option></select><div class="ihint">Verify from IS 1893 Part 1 seismic zone map for exact location</div><div class="spill" id="pill-seis"></div></div>
+    </div>
+  </div>
+  <div class="divid"><div class="divid-line"></div><div class="divid-lbl">Functional</div><div class="divid-line"></div></div>
+
+  <!-- FUNCTIONAL -->
+  <div class="section" id="functional">
+    <div class="sec-hdr"><div class="sec-ico ico-f">🏡</div><div><div class="sec-title">Functional Parameter</div><div class="sec-sub">Intended building usage and occupancy classification</div></div><div class="sec-num">6/6</div></div>
+    <div class="grid g2">
+      <div class="icard" id="ic-usage"><div class="ilbl">Building Usage <span class="isrc">NBC 2016</span></div><div class="seg"><button class="sbtn on ok" onclick="onSeg(this,'usage','residential')">Residential</button><button class="sbtn warn" onclick="onSeg(this,'usage','commercial')">Commercial</button></div><input type="hidden" id="usage" value="residential"><div class="ihint">Commercial needs extra safety checks in hazard zones</div><div class="spill" id="pill-usage"></div></div>
+      <div class="icard" style="background:var(--ink);border-color:var(--ink)">
+        <div style="color:rgba(244,241,236,.45);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;font-family:var(--fm)">Live Score Preview</div>
+        <div id="sum-score" style="font-family:var(--fd);font-size:36px;font-weight:800;color:#fff;margin-bottom:4px">—</div>
+        <div id="sum-verdict" style="font-size:12px;color:rgba(244,241,236,.5)">Run assessment to get results</div>
+        <div style="margin-top:14px;height:4px;background:rgba(244,241,236,.1);border-radius:2px;overflow:hidden"><div id="sum-bar" style="height:100%;width:0;border-radius:2px;transition:width .5s ease,background .5s"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="sub-row">
+    <button class="btn-run" id="runBtn" onclick="runAssessment()"><span>Run Full Assessment →</span></button>
+    <button class="btn-rst" onclick="resetAll()">Reset</button>
+    <div class="loading" id="loading"><div class="spin"></div>Processing 15 parameters…</div>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div id="rp">
+    <div class="divid" style="margin-top:48px"><div class="divid-line"></div><div class="divid-lbl">Assessment Result</div><div class="divid-line"></div></div>
+
+    <div class="res-hero">
+      <div class="sdial">
+        <div class="sdial-lbl">Feasibility Score</div>
+        <div class="snum-big" id="r-score">0<span>/100</span></div>
+        <div class="sbar-o"><div class="sbar-i" id="r-bar"></div></div>
+        <div class="sverd" id="r-verd">—</div>
+        <div class="sact" id="r-act">—</div>
+      </div>
+      <div class="vcard">
+        <div class="vlbl">Decision Support Output</div>
+        <div class="vtitle" id="r-vtitle">—</div>
+        <div class="vdesc" id="r-vdesc">—</div>
+        <div class="bdr"><span class="bdl">Base score</span><span class="bdv base">100</span></div>
+        <div class="bdr"><span class="bdl">Individual parameters</span><span class="bdv" id="r-ind">—</span></div>
+        <div class="bdr"><span class="bdl">Compound interactions</span><span class="bdv" id="r-comp">—</span></div>
+        <div class="bdr" style="border-top:1px solid var(--border);padding-top:9px;margin-top:5px"><span class="bdl" style="font-weight:500;color:var(--ink)">Final score</span><span class="bdv base" id="r-final" style="font-size:16px">—</span></div>
+      </div>
+    </div>
+
+    <!-- HEATMAP RESULT -->
+    <div class="rst">Parameter risk heatmap</div>
+    <div class="hm-result-grid" id="r-heatmap"></div>
+
+    <!-- DESIGN RECOMMENDATION -->
+    <div class="rst">Building design recommendation</div>
+    <div class="design-card" id="r-design"></div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="result-actions">
+      <button class="btn-pdf" onclick="downloadPDF()">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5z"/></svg>
+        Download PDF Report
+      </button>
+      <a href="/" class="btn-dash">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        View Dashboard
+      </a>
+    </div>
+
+    <!-- PARAMETER RESULTS -->
+    <div class="rst">Parameter results with remedial measures</div>
+    <div class="rgrid" id="r-grid"></div>
+
+    <!-- COMPOUND -->
+    <div id="r-csec" style="display:none">
+      <div class="rst">Compound interactions triggered</div>
+      <div class="clist" id="r-clist"></div>
+    </div>
+
+    <div class="disc"><span style="font-size:15px;flex-shrink:0;margin-top:1px">⚠️</span><span id="r-disc"></span></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY='dss_history_v3';
+const S={slope_angle:0,elevation:500,landslide_risk:'low',soil_type:'clay',bearing_capacity:150,moisture_content:12,num_floors:2,foundation_type:'pile',building_load:5,material:'concrete',wall_type:'reinforced',retaining_wall:'yes',drainage:'yes',seismic_zone:1,usage:'residential'};
+
+const PL={slope_angle:'Slope Angle',elevation:'Elevation',landslide_risk:'Landslide Risk',soil_type:'Soil Type',bearing_capacity:'Bearing Capacity',moisture_content:'Soil Moisture',num_floors:'No. of Floors',foundation_type:'Foundation Type',building_load:'Building Load',material:'Material',wall_type:'Wall Type',retaining_wall:'Retaining Wall',drainage:'Drainage',seismic_zone:'Seismic Zone',usage:'Building Usage'};
+
+// Client-side engine — mirrors Python engine.py
+const E={
+  slope(v){if(v<=15)return{score:0,label:'Suitable',status:'ok',action:'No slope treatment required.',remedial:'Maintain natural ground cover. Provide toe drains at plot boundary per IS 4111.',source:'NBC 2016, IS 14458'};if(v<=30)return{score:-8,label:'Caution — slope analysis needed',status:'warn',action:'Slope stability analysis mandatory before construction.',remedial:'Carry out slope stability analysis (FOS >= 1.5) per IS 14680. Construct stone pitching on exposed slope. Provide stepped contour bunds at every 2 m vertical interval. Install geotextile reinforcement on loose surface soil.',source:'IS 14680, IS 14458'};if(v<=45)return{score:-20,label:'Steep — major earthworks needed',status:'warn',action:'Retaining wall and slope cutting compulsory before any foundation work.',remedial:'Construct RCC retaining wall with weep holes at 3 m spacing per IS 14458. Controlled slope cutting with 1:1 cut slope. Apply shotcrete on exposed cut face. Provide subsurface drainage behind retaining wall.',source:'IS 14458'};return{score:-30,label:'Not suitable — extreme slope',status:'danger',action:'Construction must not proceed on slopes above 45 degrees.',remedial:'Full geotechnical investigation and slope stabilisation mandatory. Options include soil nailing (IS 14458), rock anchors, and mass retaining structures. Obtain licensed geotechnical engineer certification. Consider alternate site.',source:'NBC hillside guidelines, IS 14458'};},
+  elevation(v){const vm=parseFloat(v);if(vm<600)return{score:0,label:`Low altitude (${vm}m AMSL) — suitable`,status:'ok',action:'Standard design applies.',remedial:'No special elevation measures required. Standard DPC at plinth level is sufficient.',source:'NBC 2016 Part 6'};if(vm<1500)return{score:-5,label:`Medium altitude (${vm}m AMSL) — wind load check`,status:'warn',action:'Wind load analysis required per IS 875 Part 3.',remedial:`At ${vm}m altitude: Design for increased wind pressure per IS 875 Part 3. Provide wind bracing in roof truss. Anchor roof sheets with J-bolts. Reduce window-to-wall ratio.`,source:'IS 875 Part 3'};return{score:-10,label:`High altitude (${vm}m AMSL) — enhanced design`,status:'warn',action:'Enhanced wind load, snow load, and access constraints apply.',remedial:`At ${vm}m AMSL: Apply enhanced wind and snow load design per IS 875 Parts 3 and 4. Use frost-resistant OPC 43 grade cement. Insulate water pipes. Design steep-pitch roof (minimum 30 degrees) for snow shedding.`,source:'IS 875 Part 3 and 4'};},
+  landslide(v){if(v==='low')return{score:0,label:'Suitable',status:'ok',action:'Standard construction practice is acceptable.',remedial:'No landslide mitigation required. Maintain vegetation cover on upslope area.',source:'NDMA'};if(v==='medium')return{score:-10,label:'Caution — mitigation required',status:'warn',action:'Landslide mitigation measures mandatory.',remedial:'Install subsurface drainage curtain on uphill side. Construct debris barrier wall per NDMA guidelines. Avoid construction within 5 m of active slope crest. Plant deep-rooted vetiver grass. Monthly slope monitoring during monsoon.',source:'IS 14458, NDMA'};return{score:-25,label:'High risk — geotechnical survey mandatory',status:'danger',action:'Full GIR and slope stabilisation certificate required.',remedial:'Commission full Geotechnical Investigation Report from licensed engineer. Install rock bolts or soil nails per IS 14458. Construct RC debris retention wall. Install inclinometers. Obtain NDMA/GSI landslide clearance certificate.',source:'NDMA, GSI, IS 14458'};},
+  soilType(v){if(v==='rock')return{score:+5,label:'Excellent — rock foundation',status:'ok',action:'Ideal foundation base.',remedial:'No soil treatment needed. Clean rock surface before placing concrete. Provide step-cut key into rock for foundation grip.',source:'IS 1498, IS 6403'};if(v==='clay')return{score:-5,label:'Moderate — swelling/shrinkage risk',status:'warn',action:'Expansive clay treatment needed.',remedial:'Replace top 300-500 mm of expansive clay with compacted granular fill (IS 1498). Use sand-cement mix 1:8 as sub-grade treatment. Install moisture barriers. Use under-reamed pile foundation (IS 2911 Part 3). Monitor moisture quarterly for 2 years.',source:'IS 1498, IS 2911 Part 3'};return{score:-10,label:'Weak — liquefaction risk',status:'danger',action:'Sandy soil requires compaction and pile foundation.',remedial:'Carry out vibro-compaction to densify sandy soil (IS 1498). Provide pile foundation. Install stone columns or cement grouting per IS 9451. Avoid shallow foundation. Check liquefaction potential per IS 1893 for zones 3 and above.',source:'IS 1498, IS 1893, IS 9451'};},
+  bearing(v){const bc=parseFloat(v);if(bc<50)return{score:-25,label:'Very weak — soil improvement mandatory',status:'danger',action:`Bearing capacity ${bc} kN/m² — cannot be safely founded without improvement.`,remedial:`At ${bc} kN/m²: (1) Cement stabilisation — mix 5-8% OPC into top 500 mm and compact per IS 4332. (2) Stone columns per IS 9451. (3) Pile foundation to bedrock per IS 2911. Retest — must reach minimum 100 kN/m² before proceeding.`,source:'IS 6403, IS 1888, IS 9451'};if(bc<100)return{score:-12,label:`Weak soil (${bc} kN/m²) — raft or pile required`,status:'warn',action:`Bearing capacity ${bc} kN/m² insufficient for isolated footing.`,remedial:`At ${bc} kN/m²: Use raft foundation (IS 2950) or short bored piles (IS 2911). Provide M10 lean concrete blinding 75 mm thick below raft. Carry out consolidation settlement analysis per IS 8009.`,source:'IS 6403, IS 2950'};if(bc<200)return{score:0,label:`Acceptable (${bc} kN/m²)`,status:'ok',action:'Adequate for standard residential construction.',remedial:'Proceed with standard isolated footing per IS 1904. Ensure minimum 1.5 m foundation depth.',source:'IS 6403'};if(bc<300)return{score:+3,label:`Good bearing capacity (${bc} kN/m²)`,status:'ok',action:'Good load-bearing ground.',remedial:'All standard foundation types applicable.',source:'IS 6403'};return{score:+5,label:`Excellent bearing capacity (${bc} kN/m²)`,status:'ok',action:'Excellent bearing capacity.',remedial:'Strong ground. Direct foundation on natural ground acceptable.',source:'IS 6403, IS 1888'};},
+  moisture(v){const mp=parseFloat(v);if(mp<15)return{score:0,label:`Low moisture (${mp}%) — suitable`,status:'ok',action:'Soil moisture is within safe range.',remedial:'Standard DPC at plinth level is sufficient.',source:'IS 8009'};if(mp<30)return{score:-5,label:`Moderate moisture (${mp}%) — drainage needed`,status:'warn',action:`Moisture content ${mp}% indicates seasonal variation risk.`,remedial:`At ${mp}% moisture: Provide French drain around foundation perimeter. Apply bituminous waterproofing on outer foundation surface. Lay 250 micron polythene vapour barrier below ground floor slab. Monitor seasonal moisture over one full year.`,source:'IS 8009, IS 1904'};return{score:-15,label:`High moisture (${mp}%) — major risk`,status:'danger',action:`Soil moisture ${mp}% critically reduces bearing capacity.`,remedial:`At ${mp}% moisture: Install perforated HDPE pipe drains at 1.5 m depth per IS 4111. Full soil consolidation analysis per IS 8009. Apply cement-grouting or lime stabilisation. Delay construction until post-monsoon. Provide minimum 500 mm granular sub-base.`,source:'IS 8009, IS 1904, IS 4111'};},
+  floors(v){if(v<=2)return{score:0,label:'Suitable — low-rise',status:'ok',action:'Standard low-rise design applicable.',remedial:'Ensure minimum lintel band and roof band per IS 4326.',source:'NBC 2016 Part 6'};if(v<=5)return{score:-5,label:'Medium-rise — structural review needed',status:'warn',action:'Structural engineer design mandatory.',remedial:'Commission licensed structural engineer for RCC frame per IS 456. Provide ductile detailing per IS 13920. Wind load analysis per IS 875 Part 3.',source:'NBC 2016, IS 13920'};if(v<=10)return{score:-12,label:'High-rise — deep foundation mandatory',status:'warn',action:'Pile foundation and seismic analysis mandatory.',remedial:'Pile foundation (IS 2911) mandatory. Dynamic seismic analysis per IS 1893. Design shear walls for lateral load resistance. Obtain structural stability certificate.',source:'IS 2911, IS 1893'};return{score:-20,label:'Specialist design required',status:'danger',action:'Buildings above 10 floors require specialist design.',remedial:'Commission full geotechnical investigation (borehole to 30 m). Deep pile foundation with load testing per IS 2911. Time-history seismic analysis per IS 1893. Wind tunnel study recommended.',source:'IS 2911, IS 1893'};},
+  foundation(v){const fm={pile:{score:+8,label:'Excellent — pile foundation',status:'ok',action:'Best foundation for hill terrain.',remedial:'Design pile per IS 2911 based on soil boring data. Initial pile load test at 1.5 times design load. Pile cap minimum 300 mm thick.',source:'IS 2911'},raft:{score:+5,label:'Good — raft foundation',status:'ok',action:'Suitable for uniform soil conditions.',remedial:'Design raft minimum 300 mm thick with two-way reinforcement per IS 2950. Provide 75 mm lean concrete blinding below raft.',source:'IS 2950'},stepped:{score:+5,label:'Suitable — stepped foundation',status:'ok',action:'Ideal for sloped sites.',remedial:'Each step height not to exceed 600 mm per IS 1904. Provide horizontal RCC tie beam connecting all steps.',source:'IS 1904'},isolated:{score:-3,label:'Isolated footing — suitable only flat strong soil',status:'warn',action:'Acceptable only for flat terrain with bearing capacity > 150 kN/m².',remedial:'Acceptable only on flat ground with strong soil. Not recommended on slopes or weak soil. Use combined or raft foundation if columns are close.',source:'IS 1904'},combined:{score:0,label:'Combined footing — adjacent columns',status:'ok',action:'Good for adjacent columns with overlapping stress zones.',remedial:'Design combined footing to equalise differential settlement per IS 1904.',source:'IS 1904'},under_reamed:{score:+6,label:'Under-reamed pile — excellent for clay',status:'ok',action:'Specifically designed for expansive clay soils per IS 2911 Part 3.',remedial:'Under-reamed piles grip expansive clay soil and resist seasonal swelling/shrinkage. Ensure bell diameter is 2.5 times shaft diameter per IS 2911 Part 3.',source:'IS 2911 Part 3'},shallow:{score:-10,label:'Inadequate — shallow foundation risky',status:'danger',action:'Shallow foundation unsuitable for hill terrain.',remedial:'Immediately upgrade to pile, raft, or stepped foundation. Shallow foundation on slopes risks overturning, sliding, and bearing failure. Redesign per IS 2911 or IS 2950.',source:'IS 1904, IS 2911'}};return fm[v]||fm.shallow;},
+  load(v){const lv=parseFloat(v);if(lv<=5)return{score:+3,label:`Light load (${lv} kN/m²) — low risk`,status:'ok',action:'Low structural load suitable for most hill sites.',remedial:'Use lightweight roofing to further reduce load.',source:'NBC 2016, IS 875 Part 2'};if(lv<=10)return{score:0,label:`Medium load (${lv} kN/m²) — standard design`,status:'ok',action:'Standard structural design is appropriate.',remedial:'Standard structural design per IS 456 is adequate.',source:'NBC 2016 Part 6'};if(lv<=20)return{score:-5,label:`Moderate-heavy load (${lv} kN/m²) — check required`,status:'warn',action:`Load of ${lv} kN/m² requires detailed foundation and soil interaction check.`,remedial:`At ${lv} kN/m²: Commission structural engineer to verify bearing pressure. Consider raft foundation to distribute load.`,source:'NBC 2016, IS 875 Part 2'};return{score:-10,label:`Heavy load (${lv} kN/m²) — soil check mandatory`,status:'danger',action:`Heavy load ${lv} kN/m² significantly increases foundation and slope failure risk.`,remedial:`For ${lv} kN/m² load: Detailed bearing capacity test and settlement analysis per IS 8009. Deep pile foundation per IS 2911. Reduce dead load by using hollow block masonry. Consider splitting into smaller structures on terraced levels.`,source:'NBC 2016, IS 1904, IS 875 Part 2'};},
+  material(v){if(v==='concrete')return{score:+5,label:'Excellent — RCC construction',status:'ok',action:'Most suitable material for hill station construction.',remedial:'Use M20 minimum grade concrete per IS 456. Ensure 40 mm cover for all reinforcement.',source:'IS 456, NBC 2016'};if(v==='steel')return{score:+5,label:'Good — steel structure',status:'ok',action:'Flexible and seismic-resistant.',remedial:'Apply anti-corrosion treatment (hot-dip galvanising or epoxy paint) on all exposed members. Design connections for seismic loads per IS 800.',source:'IS 800'};return{score:-5,label:'Weak — wood not recommended',status:'warn',action:'Timber not suitable for moisture or seismic conditions in hill stations.',remedial:'Replace wood with RCC or steel frame. If timber retained for heritage, treat per IS 401 (CCA treatment). Design joints for earthquake resistance per IS 883.',source:'IS 883, IS 401'};},
+  wall(v){if(v==='reinforced')return{score:+5,label:'Excellent — reinforced walls',status:'ok',action:'Best seismic and lateral load resistance.',remedial:'Provide minimum 8 mm vertical reinforcement at 450 mm spacing per IS 13920. Horizontal bond beams at lintel and sill levels.',source:'IS 456, IS 13920'};if(v==='brick')return{score:0,label:'Acceptable — brick masonry',status:'ok',action:'Acceptable for low seismic zones with proper bands.',remedial:'Provide seismic bands (lintel, sill, roof) per IS 4326. Use Class A bricks minimum 7.5 N/mm² per IS 1077.',source:'IS 1905, IS 4326'};return{score:-5,label:'Weak — lightweight not suitable',status:'warn',action:'Lightweight walls lack lateral strength for hill terrain.',remedial:'Replace with reinforced masonry or RCC walls at all external positions. Lightweight walls only acceptable as non-load-bearing internal partitions.',source:'NBC 2016, IS 4326'};},
+  retaining(v,slope){if(v==='yes')return{score:+5,label:'Retaining wall present — slope protected',status:'ok',action:'Retaining wall stabilises the slope.',remedial:'Ensure design complies with IS 14458. Provide weep holes at 3 m spacing. Inspect for cracks post-monsoon.',source:'IS 14458'};if(v==='no'&&slope<=15)return{score:0,label:'No retaining wall needed',status:'ok',action:'Gentle slope — retaining wall not required.',remedial:'Provide toe drain along lower boundary. Plant grass on bare soil near structure.',source:'IS 14458'};return{score:-12,label:'Retaining wall absent — slope failure risk',status:'danger',action:'Retaining wall mandatory for slope above 15 degrees.',remedial:'Construct RCC cantilever retaining wall per IS 14458 BEFORE any construction. Provide weep holes every 3 m. Backfill with granular material. Wall must be certified by structural engineer.',source:'IS 14458, NBC hillside'};},
+  drainage(v){if(v==='yes')return{score:+3,label:'Drainage available — good',status:'ok',action:'Drainage system controls waterlogging and erosion.',remedial:'Verify drain capacity for 1-in-50-year storm. Clean drains before every monsoon.',source:'IS 4111, NBC 2016'};return{score:-10,label:'No drainage — serious risk',status:'danger',action:'Absence of drainage causes waterlogging, erosion, and foundation failure.',remedial:'Provide comprehensive drainage before construction: (1) Brick-lined surface drain with 1% gradient per IS 4111. (2) Perforated 100 mm HDPE pipe at 1.5 m depth. (3) Roof downpipes discharging away from foundation. Complete drainage system before foundation excavation.',source:'IS 4111, IS 1904, NBC 2016'};},
+  seismic(v){if(v<=2)return{score:0,label:'Low seismic risk',status:'ok',action:'Standard construction with basic earthquake-resistant features.',remedial:'Provide minimum seismic bands (lintel, sill, roof) per IS 4326.',source:'IS 1893 Part 1'};if(v===3)return{score:-6,label:'Moderate seismic zone',status:'warn',action:'Earthquake-resistant design per IS 1893 mandatory.',remedial:'Design for seismic forces per IS 1893 Zone 3 (Z=0.16). Ductile detailing per IS 13920. Shear walls for buildings above 2 floors. Commission seismic analysis from licensed structural engineer.',source:'IS 1893 Part 1, IS 13920'};if(v===4)return{score:-12,label:'High seismic zone — ductile design mandatory',status:'danger',action:'Full ductile RCC design per IS 13920 legally mandatory in Zone 4.',remedial:'Mandatory for Zone 4: (1) Full ductile detailing per IS 13920. (2) Seismic base shear per IS 1893 (Z=0.24). (3) Shear walls in both directions above G+1. (4) No unreinforced masonry. (5) Pile or raft foundation only. (6) Structural audit before permit submission.',source:'IS 1893 Part 1, IS 13920'};return{score:-12,label:'Very high seismic zone — specialist design',status:'danger',action:'Zone 5 requires highest level of earthquake engineering.',remedial:'Zone 5 mandatory: (1) Dynamic seismic analysis (time-history) per IS 1893. (2) Full ductile detailing per IS 13920. (3) Base isolation recommended for 3+ floors. (4) No brick masonry — only RCC frame. (5) Independent peer review by IIT or SERC certified engineer.',source:'IS 1893 Part 1, IS 13920'};},
+  usage(v,land,seis){if(v==='residential')return{score:0,label:'Residential — standard norms',status:'ok',action:'Standard residential construction norms apply.',remedial:'Comply with NBC 2016 Part 4 residential occupancy requirements.',source:'NBC 2016 Part 4'};const hz=land==='high'||seis>=4;return hz?{score:-5,label:'Commercial in hazard zone — extra checks',status:'warn',action:'Commercial in high hazard zone requires additional regulatory approval.',remedial:'Obtain EIA clearance. Structural audit per NBC 2016 Part 4. Emergency evacuation plan. Obtain fire NOC before occupancy.',source:'NBC 2016 Part 4, IS 1893'}:{score:0,label:'Commercial — standard norms',status:'ok',action:'Standard commercial norms apply.',remedial:'Comply with NBC 2016 Part 4 commercial occupancy requirements.',source:'NBC 2016 Part 4'};},
+  compound(s){const r=[];const add=(rule,score,reason,remedial,type)=>r.push({rule,score,reason,remedial,type});
+    if(s.building_load>10&&s.soil_type==='sandy')add('Heavy load + Sandy soil',-15,'Liquefaction under heavy load on sandy soil is a critical failure risk.','Mandatory pile foundation to bedrock. Liquefaction potential assessment per IS 1893 Annex F. Stone columns or vibro-compaction per IS 9451.','danger');
+    if(s.num_floors>5&&(s.foundation_type==='shallow'||s.foundation_type==='isolated'))add('Floors > 5 + Inadequate foundation',-20,'Shallow/isolated foundation cannot carry cumulative load of 5+ storey building.','Replace with bored cast-in-situ piles (IS 2911) minimum 450 mm diameter. Pile load test at 1.5 times design load.','danger');
+    if(s.moisture_content>30&&s.drainage==='no')add('High moisture + No drainage',-10,'Saturated soil with zero drainage — chronic bearing capacity loss.','Install full subsurface drainage before foundation work. Perforated HDPE pipe at 1.5 m depth. Sump pit with automatic pump.','danger');
+    if(s.seismic_zone>=3&&s.material==='wood')add('Seismic zone 3+ + Wood construction',-10,'Timber has poor earthquake resistance in moderate to high seismic zones.','Replace all structural timber with RCC frame per IS 456. If timber retained for heritage, provide full RCC skeleton frame.','danger');
+    if(s.landslide_risk==='high'&&s.retaining_wall==='no')add('High landslide zone + No retaining wall',-12,'High landslide risk without retaining wall — imminent slope failure threat.','Construct retaining wall and obtain slope stability certificate BEFORE any foundation excavation. Obtain NDMA clearance.','danger');
+    if(s.soil_type==='sandy'&&s.moisture_content>30)add('Sandy soil + High moisture',-8,'Saturated sandy soil loses almost all bearing capacity and liquefies during vibration.','Site dewatering before construction. Well point dewatering system around foundation area. Retest bearing capacity after dewatering.','danger');
+    if(s.elevation>1500&&s.building_load>10)add('High altitude + Heavy structural load',-8,'Heavy structure at high altitude faces amplified wind loads.','Reduce dead load by using lightweight precast panels or steel frame. Enhanced wind load analysis per IS 875 Part 3.','warn');
+    if(s.seismic_zone>=4&&s.wall_type==='brick')add('Seismic zone 4/5 + Brick walls',-8,'Unreinforced brick masonry catastrophically fails in high seismic zones.','Mandatory replacement of load-bearing brick walls with RCC frame and reinforced masonry infill per IS 13920.','danger');
+    if(s.slope_angle>30&&s.retaining_wall==='no')add('Slope > 30 degrees + No retaining wall',-12,'Steep slope without lateral support — risk of slope failure.','No construction activity until RCC retaining wall is constructed and cured. Design per IS 14458 with minimum FOS of 1.5.','danger');
+    if(s.num_floors>10&&s.seismic_zone>=4)add('Floors > 10 + Seismic zone 4/5',-15,'Tall buildings in high seismic zones require specialist earthquake engineering.','Commission specialist earthquake engineering consultancy. Time-history dynamic analysis. Base isolation recommended. Independent peer review by IIT or SERC certified engineer.','danger');
+    if(s.foundation_type==='pile'&&s.soil_type==='rock')add('Pile foundation + Rock soil',+5,'Pile-on-rock is the strongest possible foundation combination.','Ensure pile tip socketed minimum 300 mm into sound rock. Rock core sampling to confirm RQD > 50%.','ok');
+    if(s.material==='concrete'&&s.wall_type==='reinforced')add('RCC frame + Reinforced walls',+5,'Ideal structural combination for seismic and slope load resistance.','Ensure all reinforcement laps, hooks, and splices comply with IS 456 and IS 13920. M20 minimum concrete grade.','ok');
+    if(s.drainage==='yes'&&s.moisture_content>30)add('Drainage present + High moisture soil',+5,'Drainage system actively mitigates the high moisture risk.','Verify drainage capacity for peak monsoon discharge. Clean and maintain drains before each monsoon season.','ok');
+    if(s.seismic_zone<=2&&s.building_load<=5)add('Low seismic zone + Light structural load',+3,'Safest possible combination for hill station residential construction.','Maintain light structural load — avoid heavy flooring, roofing, or water tanks on upper floors.','ok');
+    return r;},
+  design(s,score){
+    const slope=s.slope_angle,seismic=s.seismic_zone,elev=s.elevation,mat=s.material;
+    let typology,detail,foundRec;
+    if(slope<=15){typology='Conventional flat-terrain residential design';detail='Standard single or multi-storey RCC frame with isolated or combined footing. No special slope adaptation required.';foundRec='Isolated column footing (IS 1904) for light loads. Combined footing or raft (IS 2950) if soil is clay or sandy.';}
+    else if(slope<=30){typology='Split-level design with stepped foundation';detail='Building footprint is terraced into the hillside at two or more levels. Each level steps down the slope by 1-2 m. Reduces cutting and filling and integrates naturally with the contour.';foundRec='Stepped foundation (IS 1904) following the natural contour. Each step tied with horizontal RCC tie beam. Pile foundation (IS 2911) recommended if soil is clay or sandy.';}
+    else if(slope<=45){typology='Stilted / platform design with deep foundation';detail='Building sits on stilts (columns) that follow the slope — the floor level is held horizontal while column heights vary with the terrain below. Avoids major earthworks and minimises slope disturbance.';foundRec='Deep pile foundation (IS 2911) mandatory. Columns of varying height support a flat structural platform. Pile tips must reach stable strata below slope failure plane.';}
+    else{typology='Site not suitable for design — stabilise slope first';detail='Slope above 45 degrees is too steep for any conventional residential building design. Major slope stabilisation and geotechnical certification mandatory before design can be considered.';foundRec='No foundation type appropriate until slope is stabilised and certified by a licensed geotechnical engineer.';}
+    const seismicSys=seismic<=2?'Standard RCC frame with seismic bands (IS 4326). Ordinary moment-resisting frame.':seismic===3?'RCC frame with ductile detailing per IS 13920. Shear walls recommended for buildings above 2 floors.':'Fully ductile RCC special moment-resisting frame per IS 13920. Shear walls in both directions mandatory. Seismic base isolation recommended for buildings above 3 floors.';
+    const roofRec=elev>1500?'Steep-pitch roof (minimum 30° pitch) with metal sheet or Mangalore tile to shed snow and rain. Anchored against high-altitude wind uplift per IS 875 Part 3.':elev>600?'Sloped roof (15-25° pitch) with wind-resistant anchoring. Avoid flat roofs due to wind and rain accumulation risk.':'Standard sloped roof (10-15° pitch) suitable. Flat roof acceptable if waterproofed with APP membrane per IS 13707.';
+    const matNote=mat==='wood'?'Timber is not recommended for hill station construction. Replace with RCC frame with optional timber cladding per IS 883.':mat==='steel'?'Steel frame is suitable. Apply anti-corrosion protection — minimum 80 micron DFT epoxy primer per IS 800.':'RCC construction using M20 minimum grade concrete per IS 456. Use OPC 43 grade cement in high-altitude or high-moisture sites.';
+    const overall=score>=75?'Site is suitable. Proceed with detailed structural design using the recommended typology.':score>=50?'Site is conditionally suitable. Address all flagged issues and obtain structural engineer approval before submitting building plans.':score>=30?'Site requires significant remediation. Complete all remedial works and obtain geotechnical clearance before engaging a structural designer.':'Site is currently unsuitable. Do not commission building design until site conditions are fundamentally improved.';
+    return{typology,typology_detail:detail,foundation_recommendation:foundRec,seismic_design_system:seismicSys,roof_recommendation:roofRec,material_note:matNote,overall_design_guidance:overall};},
+  verdict(sc){if(sc>=75)return{verdict:'Feasible',color:'green',action:'Proceed with detailed structural design and building permit application.',description:'Site conditions are suitable for residential construction. Commission a licensed structural engineer to prepare building plans based on the recommended design typology.'};if(sc>=50)return{verdict:'Feasible with conditions',color:'amber',action:'Complete all remedial measures below before submitting building plans.',description:'Construction is possible but specific risks must be mitigated first. Obtain structural engineer sign-off on each remedial measure before commencing construction.'};if(sc>=30)return{verdict:'High risk — expert review mandatory',color:'orange',action:'Mandatory geotechnical investigation and structural expert review before any site work.',description:'Multiple high-risk parameters identified. Do not proceed with any site preparation or construction until a licensed geotechnical engineer certifies the site.'};return{verdict:'Not recommended',color:'red',action:'Do NOT construct. Obtain geotechnical clearance and complete major remediation first.',description:'Site conditions present fundamental safety risks. A comprehensive geotechnical investigation and site remediation programme must be completed before this site can be reconsidered.'};},
+  assess(s){
+    const ind={slope_angle:this.slope(s.slope_angle),elevation:this.elevation(s.elevation),landslide_risk:this.landslide(s.landslide_risk),soil_type:this.soilType(s.soil_type),bearing_capacity:this.bearing(s.bearing_capacity),moisture_content:this.moisture(s.moisture_content),num_floors:this.floors(s.num_floors),foundation_type:this.foundation(s.foundation_type),building_load:this.load(s.building_load),material:this.material(s.material),wall_type:this.wall(s.wall_type),retaining_wall:this.retaining(s.retaining_wall,s.slope_angle),drainage:this.drainage(s.drainage),seismic_zone:this.seismic(s.seismic_zone),usage:this.usage(s.usage,s.landslide_risk,s.seismic_zone)};
+    const comp=this.compound(s);
+    const indT=Object.values(ind).reduce((a,b)=>a+b.score,0);
+    const compT=comp.reduce((a,b)=>a+b.score,0);
+    const final=Math.max(0,Math.min(100,100+indT+compT));
+    const dr=this.design(s,final);
+    return{score:final,indTotal:indT,compTotal:compT,verdict:this.verdict(final),individual:ind,compound:comp,design:dr};
+  }
+};
+
+// ── HEATMAP ──────────────────────────────────────────────────
+const HM_KEYS=['slope_angle','elevation','landslide_risk','soil_type','bearing_capacity','moisture_content','num_floors','foundation_type','building_load','material','wall_type','retaining_wall','drainage','seismic_zone','usage'];
+const HM_SHORT={slope_angle:'Slope',elevation:'Elevation',landslide_risk:'Landslide',soil_type:'Soil type',bearing_capacity:'Bearing',moisture_content:'Moisture',num_floors:'Floors',foundation_type:'Foundation',building_load:'Load',material:'Material',wall_type:'Wall',retaining_wall:'Retaining',drainage:'Drainage',seismic_zone:'Seismic',usage:'Usage'};
+
+function buildHeatmap(){
+  const hm=document.getElementById('heatmap');
+  hm.innerHTML=HM_KEYS.map(k=>`<div><div class="hm-cell neutral" id="hmc-${k}" title="${PL[k]}"></div><div class="hm-lbl">${HM_SHORT[k]}</div></div>`).join('');
+}
+
+function updateHeatmap(individual){
+  HM_KEYS.forEach(k=>{
+    const cell=document.getElementById('hmc-'+k);
+    if(!cell) return;
+    const s=individual[k];
+    if(s) cell.className='hm-cell '+s.status;
+  });
+}
+
+// ── INPUT HANDLERS ───────────────────────────────────────────
+const pillMap={slope_angle:['pill-slope','ic-slope'],elevation:['pill-elev','ic-elev'],landslide_risk:['pill-land','ic-land'],soil_type:['pill-soil','ic-soil'],bearing_capacity:['pill-bear','ic-bear'],moisture_content:['pill-moist','ic-moist'],num_floors:['pill-floors','ic-floors'],foundation_type:['pill-found','ic-found'],building_load:['pill-load','ic-load'],material:['pill-mat','ic-mat'],wall_type:['pill-wall','ic-wall'],retaining_wall:['pill-ret','ic-ret'],drainage:['pill-drain','ic-drain'],seismic_zone:['pill-seis','ic-seis'],usage:['pill-usage','ic-usage']};
+
+function onSlider(el,outId,suffix){const v=el.value;document.getElementById(outId).textContent=v+suffix;S[el.id]=(el.id==='num_floors')?parseInt(v):parseFloat(v);liveUpdate();}
+function onNumInput(field){const el=document.getElementById(field);const v=parseFloat(el.value)||0;S[field]=(field==='num_floors')?parseInt(v):v;liveUpdate();}
+function onSeg(btn,field,value){btn.closest('.seg').querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById(field).value=value;S[field]=(field==='seismic_zone')?parseInt(value):value;liveUpdate();}
+function onDrop(el){S[el.id]=(el.id==='seismic_zone')?parseInt(el.value):el.value;liveUpdate();}
+
+// SPT calculator
+async function calcSPT(){
+  const n=parseFloat(document.getElementById('spt-n').value);
+  const d=parseFloat(document.getElementById('spt-d').value)||1.5;
+  const soil=S.soil_type||'sandy';
+  if(!n||n<1){document.getElementById('spt-result').textContent='Enter a valid N-value (1–100).';return;}
+  document.getElementById('spt-result').textContent='Calculating…';
+  try{
+    const res=await fetch('/api/dss/spt/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({n_value:n,depth_m:d,soil_type:soil})});
+    const data=await res.json();
+    if(data.bearing_capacity){
+      const bc=Math.round(data.bearing_capacity);
+      document.getElementById('spt-result').textContent=`N=${n} at ${d}m depth → Bearing capacity ≈ ${bc} kN/m²  (${data.classification||''})`;
+      document.getElementById('bearing_capacity').value=bc;
+      S.bearing_capacity=bc;
+      liveUpdate();
+      toast(`SPT calculated: ${bc} kN/m² — bearing capacity updated`);
+    }
+  }catch(e){
+    // fallback client-side
+    let bc;
+    if(soil==='rock') bc=n>=50?440+(n-50)*8:n*8.8;
+    else if(soil==='clay'){const cu=(n/15)*100;bc=(5.14*cu)/3;}
+    else bc=n*10*(1+0.2*Math.min(d,3));
+    bc=Math.round(bc);
+    document.getElementById('spt-result').textContent=`N=${n} at ${d}m → Bearing capacity ≈ ${bc} kN/m²`;
+    document.getElementById('bearing_capacity').value=bc;
+    S.bearing_capacity=bc;
+    liveUpdate();
+    toast(`SPT calculated: ${bc} kN/m²`);
+  }
+}
+
+// Live update
+function liveUpdate(){
+  const r=E.assess(S);
+  const sc=r.score;
+  const vc=r.verdict.color;
+  const bc=vc==='green'?'#1D9E75':vc==='amber'?'#EF9F27':vc==='orange'?'#D85A30':'#E24B4A';
+  // Live bar
+  document.getElementById('live-fill').style.width=sc+'%';
+  document.getElementById('live-fill').style.background=bc;
+  document.getElementById('live-num').textContent=sc;
+  const lv=document.getElementById('live-verdict');
+  lv.textContent=r.verdict.verdict;
+  lv.style.background=bc+'22';lv.style.color=bc;
+  // Summary card
+  document.getElementById('sum-score').textContent=sc+'/100';
+  document.getElementById('sum-verdict').textContent=r.verdict.verdict;
+  document.getElementById('sum-bar').style.width=sc+'%';
+  document.getElementById('sum-bar').style.background=bc;
+  // Pills + card borders
+  Object.entries(r.individual).forEach(([key,val])=>{
+    const [pillId,cardId]=pillMap[key];
+    const pill=document.getElementById(pillId);const card=document.getElementById(cardId);
+    if(!pill||!card)return;
+    pill.textContent=val.label;pill.className='spill vis '+val.status;
+    card.className='icard s-'+val.status;
+  });
+  updateHeatmap(r.individual);
+  [1,2,3,4,5,6].forEach(i=>document.getElementById('st'+i).classList.add('done'));
+}
+
+// Save to localStorage
+function saveToHistory(result, params){
+  const data=JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
+  const siteName=document.getElementById('site-name').value.trim()||'Site Assessment '+(data.length+1);
+  const id='DSS-'+Date.now().toString(36).toUpperCase();
+  data.push({id,site_name:siteName,date:new Date().toISOString(),score:result.score,verdict:result.verdict.verdict,action:result.verdict.action,params:{...params},flags:result.flags||{},design_typology:result.design?.typology||''});
+  localStorage.setItem(STORE_KEY,JSON.stringify(data));
+}
+
+let lastResult=null;
+
+async function runAssessment(){
+  const btn=document.getElementById('runBtn');btn.disabled=true;
+  document.getElementById('loading').classList.add('vis');
+  document.getElementById('rp').classList.remove('vis');document.getElementById('rp').style.display='none';
+  let result;
+  try{
+    const res=await fetch('/api/dss/assess/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+    result=await res.json();
+    if(result.errors){toast('Validation error — check inputs');btn.disabled=false;document.getElementById('loading').classList.remove('vis');return;}
+    result.indTotal=result.score_breakdown.individual_total;
+    result.compTotal=result.score_breakdown.compound_total;
+    result.individual=result.individual_results;
+    result.design=result.design_recommendation;
+    result.flags=result.flags||{};
+  }catch(e){
+    result=E.assess(S);result.score_breakdown={base:100,individual_total:result.indTotal,compound_total:result.compTotal};result.flags={};
+    Object.entries(result.individual).forEach(([k,v])=>{if(v.status!=='ok')result.flags[k]=v;});
+  }
+  lastResult=result;
+  saveToHistory(result,{...S});
+  document.getElementById('loading').classList.remove('vis');btn.disabled=false;
+  renderResult(result);
+}
+
+function renderResult(r){
+  const panel=document.getElementById('rp');panel.style.display='block';panel.classList.add('vis');
+  const sc=r.score;const vd=r.verdict;
+  document.getElementById('r-score').innerHTML=sc+'<span>/100</span>';
+  setTimeout(()=>{const bar=document.getElementById('r-bar');bar.style.width=sc+'%';bar.className='sbar-i b-'+vd.color;},80);
+  document.getElementById('r-verd').textContent=vd.verdict;document.getElementById('r-verd').className='sverd c-'+vd.color;
+  document.getElementById('r-act').textContent=vd.action;
+  document.getElementById('r-vtitle').textContent=vd.verdict;document.getElementById('r-vtitle').className='vtitle c-'+vd.color;
+  document.getElementById('r-vdesc').textContent=vd.description||vd.desc||'';
+  const bd=r.score_breakdown||{base:100,individual_total:r.indTotal,compound_total:r.compTotal};
+  const indEl=document.getElementById('r-ind');indEl.textContent=(bd.individual_total>=0?'+':'')+bd.individual_total;indEl.className='bdv '+(bd.individual_total>=0?'pos':'neg');
+  const compEl=document.getElementById('r-comp');compEl.textContent=(bd.compound_total>=0?'+':'')+bd.compound_total;compEl.className='bdv '+(bd.compound_total>=0?'pos':'neg');
+  document.getElementById('r-final').textContent=sc;
+
+  // Heatmap result
+  const ind=r.individual||r.individual_results;
+  document.getElementById('r-heatmap').innerHTML=Object.entries(ind).map(([key,val])=>`<div class="hm-result-cell ${val.status}"><div class="hm-rc-param">${HM_SHORT[key]||key}</div><div class="hm-rc-label">${val.label}</div><div class="hm-rc-score">${val.score>=0?'+':''}${val.score} pts</div></div>`).join('');
+
+  // Design recommendation
+  const dr=r.design||r.design_recommendation;
+  if(dr){document.getElementById('r-design').innerHTML=`<span class="design-badge">Recommended Design Approach</span><div class="design-typology">${dr.typology}</div><div class="design-detail">${dr.typology_detail}</div><div class="design-grid"><div class="design-item"><div class="design-item-lbl">Foundation recommendation</div><div class="design-item-txt">${dr.foundation_recommendation}</div></div><div class="design-item"><div class="design-item-lbl">Seismic design system</div><div class="design-item-txt">${dr.seismic_design_system}</div></div><div class="design-item"><div class="design-item-lbl">Roof recommendation</div><div class="design-item-txt">${dr.roof_recommendation}</div></div><div class="design-item"><div class="design-item-lbl">Material note</div><div class="design-item-txt">${dr.material_note}</div></div></div><div class="design-overall">${dr.overall_design_guidance}</div>`;}
+
+  // Parameter results
+  const grid=document.getElementById('r-grid');
+  grid.innerHTML=Object.entries(ind).map(([key,val])=>{
+    const sc2=val.score;const cls=sc2>0?'pos':sc2<0?'neg':'z';const txt=(sc2>0?'+':'')+sc2+' pts';
+    const rem=val.remedial&&val.status!=='ok'?`<div class="remedial-box"><div class="remedial-lbl">Remedial measures</div><div class="remedial-txt">${val.remedial}</div></div>`:'';
+    return `<div class="ritem ${val.status}"><div class="rip">${PL[key]||key}</div><div class="ril">${val.label}</div><div class="ris ${cls}">${txt}</div>${rem}<div class="ria-src">${val.source||''}</div></div>`;
+  }).join('');
+
+  // Compound
+  const comps=r.compound||r.compound_rules_triggered||[];
+  const csec=document.getElementById('r-csec');
+  if(comps.length){csec.style.display='block';document.getElementById('r-clist').innerHTML=comps.map(c=>{const icons={danger:'⚡',warn:'⚠️',ok:'✓'};const rem=c.remedial?`<div class="cremedial"><strong>Action:</strong> ${c.remedial}</div>`:'';return `<div class="citem ${c.type}"><div class="crule-top"><div class="crule">${icons[c.type]||'•'} ${c.rule}</div><div class="cscore ${c.score>=0?'pos':'neg'}">${c.score>=0?'+':''}${c.score} pts</div></div><div class="creason">${c.reason}</div>${rem}</div>`;}).join('');}
+  else{csec.style.display='none';}
+
+  document.getElementById('r-disc').textContent='This DSS provides preliminary screening only. All thresholds are based on IS Codes (BIS), NBC 2016, and NDMA/GSI guidelines. Final construction decisions must be validated by a licensed structural and geotechnical engineer with site-specific SIR, SPT, and IS 1893 seismic zone verification.';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Assessment saved to history — Score: '+sc+'/100');
+}
+
+// PDF
+function downloadPDF(){
+  if(!lastResult){toast('Please run assessment first');return;}
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const r=lastResult;const pw=210;const margin=18;const cw=pw-margin*2;let y=20;
+  const hdr=(txt,sz,bold,color)=>{doc.setFontSize(sz);doc.setFont('helvetica',bold?'bold':'normal');if(color)doc.setTextColor(...color);else doc.setTextColor(14,14,14);doc.text(txt,margin,y);y+=sz*0.5+2;};
+  const txt=(t,sz,color,indent)=>{doc.setFontSize(sz);doc.setFont('helvetica','normal');if(color)doc.setTextColor(...color);else doc.setTextColor(58,58,58);const lines=doc.splitTextToSize(t,cw-(indent||0));doc.text(lines,margin+(indent||0),y);y+=lines.length*sz*0.45+1;};
+  const line=()=>{doc.setDrawColor(220,218,210);doc.line(margin,y,pw-margin,y);y+=5;};
+  const checkPage=(need)=>{if(y+need>275){doc.addPage();y=20;}};
+  // Header
+  doc.setFillColor(14,14,14);doc.rect(0,0,210,44,'F');
+  doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setTextColor(244,241,236);doc.text('Hill Construction DSS — Site Feasibility Report',margin,18);
+  const siteName=document.getElementById('site-name').value.trim()||'Site Assessment';
+  doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(180,177,173);doc.text(siteName+' · '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}),margin,30);
+  y=54;
+  // Score banner
+  const sc=r.score;const vd=r.verdict;
+  const bclr=sc>=75?[26,107,74]:sc>=50?[138,90,0]:sc>=30?[192,104,0]:[139,26,26];
+  doc.setFillColor(...bclr);doc.roundedRect(margin,y,cw,20,2,2,'F');
+  doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+  doc.text('Score: '+sc+'/100  |  Verdict: '+vd.verdict,margin+5,y+8);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(vd.action,margin+5,y+15);
+  y+=28;
+  // Input params
+  hdr('Input Parameters',11,true);
+  const p=S;const colW=cw/3;let px=margin;let py=y;
+  const paramList=[['Slope Angle',p.slope_angle+'°'],['Elevation',p.elevation+' m AMSL'],['Landslide Risk',p.landslide_risk],['Soil Type',p.soil_type],['Bearing Capacity',p.bearing_capacity+' kN/m²'],['Moisture Content',p.moisture_content+'%'],['No. of Floors',p.num_floors],['Foundation Type',p.foundation_type],['Building Load',p.building_load+' kN/m²'],['Material',p.material],['Wall Type',p.wall_type],['Retaining Wall',p.retaining_wall],['Drainage',p.drainage],['Seismic Zone','Zone '+p.seismic_zone],['Usage',p.usage]];
+  paramList.forEach(([label,val],i)=>{if(i%3===0&&i>0){py+=12;px=margin;}doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(110,110,110);doc.text(label,px,py);doc.setFont('helvetica','normal');doc.setTextColor(14,14,14);doc.text(String(val),px,py+5);px+=colW;});
+  y=py+14;line();
+  // Design
+  const dr=r.design||r.design_recommendation;
+  if(dr){checkPage(40);hdr('Building Design Recommendation',11,true,[24,95,165]);doc.setFillColor(230,241,251);doc.roundedRect(margin,y,cw,10,2,2,'F');doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(12,68,124);doc.text(dr.typology,margin+4,y+7);y+=14;txt(dr.typology_detail,9,[44,44,42]);y+=2;
+  [['Foundation Recommendation',dr.foundation_recommendation],['Seismic Design System',dr.seismic_design_system],['Roof Recommendation',dr.roof_recommendation],['Material Note',dr.material_note]].forEach(([lbl,val])=>{checkPage(16);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(24,95,165);doc.text(lbl+':',margin,y);y+=5;txt(val,9,[12,68,124],4);y+=1;});
+  doc.setFillColor(14,14,14);doc.roundedRect(margin,y,cw,10,2,2,'F');doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(244,241,236);const ol=doc.splitTextToSize(dr.overall_design_guidance,cw-8);doc.text(ol,margin+4,y+5);y+=12;line();}
+  // Parameter results
+  const ind=r.individual||r.individual_results;
+  checkPage(20);hdr('Parameter Results & Remedial Measures',11,true);
+  Object.entries(ind).forEach(([key,val])=>{checkPage(28);const clr=val.status==='ok'?[26,107,74]:val.status==='warn'?[138,90,0]:[139,26,26];const bgclr=val.status==='ok'?[212,237,227]:val.status==='warn'?[253,239,199]:[252,228,228];doc.setFillColor(...bgclr);doc.roundedRect(margin,y,cw,7,1,1,'F');doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(...clr);doc.text((PL[key]||key)+': '+val.label,margin+3,y+5);const sc2=val.score;doc.text((sc2>=0?'+':'')+sc2+' pts',pw-margin-3,y+5,{align:'right'});y+=10;
+    if(val.remedial&&val.status!=='ok'){const rl=doc.splitTextToSize('Action: '+val.remedial,cw-6);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...clr);doc.text(rl,margin+3,y);y+=rl.length*4+2;}
+    const sl=doc.splitTextToSize('Source: '+val.source,cw-6);doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(150,148,144);doc.text(sl,margin+3,y);y+=sl.length*3.5+3;});
+  line();
+  // Disclaimer
+  checkPage(20);doc.setFillColor(241,239,232);doc.roundedRect(margin,y,cw,18,2,2,'F');doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(139,26,26);doc.text('Important Disclaimer',margin+4,y+5);doc.setFont('helvetica','normal');doc.setTextColor(90,88,86);const dl=doc.splitTextToSize('This DSS provides preliminary screening only. All thresholds are based on IS Codes (BIS), NBC 2016, and NDMA/GSI guidelines. Final construction decisions must be validated by a licensed structural and geotechnical engineer.',cw-8);doc.text(dl,margin+4,y+10);y+=20;
+  // Footer
+  const tp=doc.getNumberOfPages();for(let i=1;i<=tp;i++){doc.setPage(i);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(150,148,144);doc.text('Hill Construction DSS · IS Code Compliant',margin,290);doc.text('Page '+i+' of '+tp,pw-margin,290,{align:'right'});}
+  doc.save('Hill_DSS_'+siteName.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toast('PDF downloaded successfully');
+}
+
+function resetAll(){
+  S.slope_angle=0;S.elevation=500;S.landslide_risk='low';S.soil_type='clay';S.bearing_capacity=150;S.moisture_content=12;S.num_floors=2;S.foundation_type='pile';S.building_load=5;S.material='concrete';S.wall_type='reinforced';S.retaining_wall='yes';S.drainage='yes';S.seismic_zone=1;S.usage='residential';
+  document.getElementById('slope_angle').value=0;document.getElementById('sv-slope').textContent='0°';
+  document.getElementById('elevation').value=500;document.getElementById('bearing_capacity').value=150;
+  document.getElementById('moisture_content').value=12;document.getElementById('building_load').value=5;
+  document.getElementById('num_floors').value=2;document.getElementById('sv-floors').textContent='2';
+  document.getElementById('foundation_type').value='pile';document.getElementById('seismic_zone').value=1;
+  document.getElementById('site-name').value='';
+  document.querySelectorAll('.seg').forEach(g=>g.querySelectorAll('.sbtn').forEach((b,i)=>b.classList.toggle('on',i===0)));
+  Object.values(pillMap).forEach(([pId,cId])=>{const p=document.getElementById(pId);const c=document.getElementById(cId);if(p)p.className='spill';if(c)c.className='icard';});
+  document.getElementById('rp').style.display='none';document.getElementById('rp').classList.remove('vis');
+  lastResult=null;liveUpdate();toast('Reset to defaults');
+}
+function goTo(id){document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// Init
+buildHeatmap();liveUpdate();
+</script>
+</body>
+</html>
